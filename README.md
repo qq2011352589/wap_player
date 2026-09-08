@@ -79,8 +79,8 @@ src/
 | 约束 | 说明 |
 |------|------|
 | 付费货币拦截 | 硬拦截 `退出登陆 / 充值 / 商城 / 购买 / 元宝 / VIP` 等操作 |
-| 步数限制 | 最大步数 `maxSteps`，防止无限循环 |
-| 页面重复上限 | 同一 URL 重复访问上限 `maxRepeatedUrls`，打破死循环 |
+| 步数限制 | `maxSteps` 默认 `0`（**无限步数**，免费AI无成本顾虑）；设正数可限制 |
+| 死循环检测 | 连续停留同一页面的次数上限 `maxRepeatedUrls`（默认 5），防死循环 |
 | 超时控制 | 单次 AI 请求超时 `timeoutMs`，避免挂死 |
 | 限流控制 | `minRequestIntervalMs` 控制两次 AI 请求间隔，避免限流 |
 
@@ -169,9 +169,9 @@ const config = loadConfig({
     password: 'a1345772',
   },
   loop: {
-    maxSteps: 50,
+    maxSteps: 0,          // 0 = 无限步数（免费AI，无成本顾虑）
     stepDelayMs: 800,
-    maxRepeatedUrls: 3,
+    maxRepeatedUrls: 5,   // 连续同页面次数上限，防死循环；0 = 禁用
   },
   logLevel: 'info',
 });

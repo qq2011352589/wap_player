@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       max_steps:
-        description: '最大执行步数'
+        description: '最大执行步数（0=无限）'
         required: false
-        default: '50'
+        default: '0'
   schedule:
     # 每 6 小时运行一次
     - cron: '0 */6 * * *'
@@ -21,6 +21,7 @@ concurrency:
 jobs:
   play:
     runs-on: ubuntu-latest
+    timeout-minutes: 350
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -44,7 +45,7 @@ jobs:
           MAAS_XUNFEI_API_KEY: ${{ secrets.MAAS_XUNFEI_API_KEY }}
           WAP_USERNAME: ${{ secrets.WAP_USERNAME }}
           WAP_PASSWORD: ${{ secrets.WAP_PASSWORD }}
-          LOOP_MAX_STEPS: ${{ github.event.inputs.max_steps || '50' }}
+          LOOP_MAX_STEPS: ${{ github.event.inputs.max_steps || '0' }}
         run: node dist/examples/report.js
 
       - name: Commit status report

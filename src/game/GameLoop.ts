@@ -46,19 +46,27 @@ export class GameLoop {
 
   async run(): Promise<LoopResult> {
     const visited: string[] = [];
-    const visitCount = new Map<string, number>();
+    // maxSteps <= 0 表示无限步数（免费AI无成本顾虑）
+    const stepLimit = this.config.maxSteps > 0 ? this.config.maxSteps : Number.POSITIVE_INFINITY;
     let page = await this.client.enter();
-    let stopReason = '达到最大步数';
+    let stopReason = this.config.maxSteps > 0 ? '达到最大步数' : '无限循环（外部终止）';
+    let lastUrl = '';
+    let sameUrlStreak = 0;
 
-    for (let step = 0; step < this.config.maxSteps; step++) {
+    for (let step = 0; step < stepLimit; step++) {
       const actions = buildActions(page);
       const state = this.stateManager.build(page, actions);
       visited.push(page.url);
 
-      const repeat = (visitCount.get(page.url) ?? 0) + 1;
-      visitCount.set(page.url, repeat);
-      if (repeat > this.config.maxRepeatedUrls) {
-        stopReason = `页面重复访问次数过多：${page.url}`;
+      // 死循环检测：连续停留在同一页面
+      if (page.url === lastUrl) {
+        sameUrlStreak += 1;
+      } else {
+        sameUrlStreak = 0;
+        lastUrl = page.url;
+      }
+      if (this.config.maxRepeatedUrls > 0 && sameUrlStreak >= this.config.maxRepeatedUrls) {
+        stopReason = `连续 ${sameUrlStreak + 1} 次停留在同一页面，疑似死循环：${page.url}`;
         logger.warn(stopReason);
         break;
       }

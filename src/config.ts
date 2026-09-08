@@ -28,11 +28,11 @@ export interface GameConfig {
 }
 
 export interface LoopConfig {
-  /** 最大执行步数，防止无限循环 */
+  /** 最大执行步数；0 表示无限步数（免费AI，无成本顾虑） */
   maxSteps: number;
   /** 每步之间的间隔 */
   stepDelayMs: number;
-  /** 同一 URL 允许重复访问的最大次数，用于打破死循环 */
+  /** 连续停留在同一页面的最大次数，用于打破死循环；0 表示禁用 */
   maxRepeatedUrls: number;
 }
 
@@ -68,9 +68,9 @@ const DEFAULTS: FrameworkConfig = {
       'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Mobile Safari/537.36 WAPGamePlayFramework/1.0',
   },
   loop: {
-    maxSteps: 50,
+    maxSteps: 0,
     stepDelayMs: 800,
-    maxRepeatedUrls: 3,
+    maxRepeatedUrls: 5,
   },
   logLevel: 'info',
 };
@@ -109,6 +109,7 @@ export function loadConfig(overrides?: ConfigOverrides): FrameworkConfig {
 
   if (env.LOOP_MAX_STEPS) loop.maxSteps = Number(env.LOOP_MAX_STEPS);
   if (env.LOOP_STEP_DELAY_MS) loop.stepDelayMs = Number(env.LOOP_STEP_DELAY_MS);
+  if (env.LOOP_MAX_REPEATED_URLS) loop.maxRepeatedUrls = Number(env.LOOP_MAX_REPEATED_URLS);
 
   const logLevel = (env.LOG_LEVEL as LogLevel | undefined) ?? overrides?.logLevel ?? DEFAULTS.logLevel;
 
