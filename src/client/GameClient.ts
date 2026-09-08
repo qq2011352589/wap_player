@@ -40,8 +40,8 @@ export class GameClient {
     return this.parser.parse(response.url, response.body);
   }
 
-  /** 执行一个操作，返回操作后的页面。 */
-  async execute(action: GameAction): Promise<WapPage> {
+  /** 执行一个操作，返回操作后的页面。fieldValues 为 AI 为表单填写的字段值。 */
+  async execute(action: GameAction, fieldValues?: Record<string, string>): Promise<WapPage> {
     if (action.kind === 'link' && action.link) {
       const response = await this.http.get(action.link.href);
       return this.parser.parse(response.url, response.body);
@@ -52,6 +52,12 @@ export class GameClient {
       for (const field of action.form.fields) {
         data[field.name] = field.value;
       }
+      if (fieldValues) {
+        for (const [name, value] of Object.entries(fieldValues)) {
+          data[name] = value;
+        }
+      }
+      logger.debug(`提交表单字段：${JSON.stringify(data)}`);
       const response =
         action.form.method === 'POST'
           ? await this.http.post(action.form.action, data)

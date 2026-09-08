@@ -29,6 +29,9 @@ const SYSTEM_PROMPT = [
   '请只输出一个 JSON 对象，格式：',
   '{"actionId":"<操作编号>","rationale":"<简短中文理由>","confidence":<0到1的数字>}',
   'actionId 必须是给定操作编号之一。不要输出 JSON 以外的任何内容。',
+  '如果选中的是表单，且表单提示里有“可填写”字段，可在 JSON 中增加 fieldValues 对象来填写，例如：',
+  '{"actionId":"F0","rationale":"搜索粮食","confidence":0.9,"fieldValues":{"keyword":"粮食","amount":"100"}}',
+  'fieldValues 的键必须是表单提示中列出的字段名；下拉字段只能填提示给出的选项。',
   '优先选择能推进任务、采集资源、建造升级、领取奖励的操作；',
   '绝对不要选择会消耗付费货币（元宝）或退出登录的操作。',
 ].join('\n');
@@ -166,7 +169,20 @@ export class FreeAIModel {
     const confidenceRaw = typeof obj.confidence === 'number' ? obj.confidence : 0.5;
     const confidence = Math.max(0, Math.min(1, confidenceRaw));
 
-    return { actionId, rationale, confidence, source: 'free-ai' };
+    const fieldValues = this.parseFieldValues(obj.fieldValues);
+
+    return { actionId, rationale, confidence, source: 'free-ai', fieldValues };
+  }
+
+  /** 解析 AI 返回的表单字段值。 */
+  private parseFieldValues(raw: unknown): Record<string, string> | undefined {
+    if (typeof raw !== 'object' || raw === null) return undefined;
+    const result: Record<string, string> = {};
+    for (const [name, value] of Object.entries(raw as Record<string, unknown>)) {
+      if (value === null || value === undefined) continue;
+      result[name] = String(value);
+    }
+    return Object.keys(result).length > 0 ? result : undefined;
   }
 
   private async throttle(): Promise<void> {

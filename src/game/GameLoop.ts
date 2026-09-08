@@ -87,7 +87,7 @@ export class GameLoop {
       }
 
       logger.info(`执行操作：${action.label}`);
-      page = await this.client.execute(action);
+      page = await this.client.execute(action, decision.fieldValues);
       await this.sleep(this.config.stepDelayMs);
     }
 

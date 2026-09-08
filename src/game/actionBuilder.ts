@@ -2,10 +2,31 @@
  * actionBuilder - 把解析后的页面转换为一组可执行操作。
  */
 
-import type { GameAction, WapPage } from '../types';
+import type { FormField, GameAction, GameForm, WapPage } from '../types';
 
 const MAX_LINKS = 40;
 const MAX_FORMS = 10;
+
+/** 可被 AI 主动填写/选择的字段类型 */
+const FILLABLE_TYPES = new Set(['text', 'textarea', 'password', 'select', 'search', 'number', 'tel', 'email']);
+
+function describeField(field: FormField): string {
+  if (field.type === 'select' && field.options && field.options.length > 0) {
+    const options = field.options
+      .slice(0, 8)
+      .map((option) => option.label || option.value)
+      .join('/');
+    return `${field.name}(下拉:${options})`;
+  }
+  const hint = field.placeholder ? `(${field.placeholder})` : '';
+  return `${field.name}${hint}`;
+}
+
+function describeForm(form: GameForm): string {
+  const fillable = form.fields.filter((field) => FILLABLE_TYPES.has(field.type));
+  if (fillable.length === 0) return '';
+  return ` ｜可填写: ${fillable.map(describeField).join('，')}`;
+}
 
 export function buildActions(page: WapPage): GameAction[] {
   const actions: GameAction[] = [];
@@ -30,7 +51,7 @@ export function buildActions(page: WapPage): GameAction[] {
     actions.push({
       id: `F${index}`,
       kind: 'form',
-      label: `[表单] ${form.method} ${form.action}`,
+      label: `[表单] ${form.method} ${form.action}${describeForm(form)}`,
       form,
     });
   });
