@@ -1,0 +1,51 @@
+name: WAP Auto Play & Status Report
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 每 6 小时运行一次
+    - cron: '0 */6 * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wap-play
+  cancel-in-progress: false
+
+jobs:
+  play:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Type check
+        run: npm run check
+
+      - name: Build
+        run: npm run build
+
+      - name: Play and generate status report
+        env:
+          MAAS_XUNFEI_API_KEY: ${{ secrets.MAAS_XUNFEI_API_KEY }}
+          WAP_USERNAME: ${{ secrets.WAP_USERNAME }}
+          WAP_PASSWORD: ${{ secrets.WAP_PASSWORD }}
+          LOOP_MAX_STEPS: '10'
+        run: node dist/examples/report.js
+
+      - name: Commit status report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/
+          git diff --cached --quiet || git commit -m "chore: update status report [skip ci]"
+          git push

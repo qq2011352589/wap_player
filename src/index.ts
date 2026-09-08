@@ -27,3 +27,5 @@ export { GameLoop } from './game/GameLoop';
 export { GameStateManager } from './game/GameStateManager';
 export type { ResourceSnapshot } from './resource/ResourceManager';
 export { PAID_TOKEN_TYPES, ResourceManager } from './resource/ResourceManager';
+export type { ReportInput } from './report/HtmlReport';
+export { renderHtmlReport } from './report/HtmlReport';

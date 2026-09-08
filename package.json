@@ -9,7 +9,8 @@
     "check": "tsc -p tsconfig.json --noEmit",
     "start": "node dist/examples/play.js",
     "play": "npm run build && node dist/examples/play.js",
-    "status": "npm run build && node dist/examples/status.js"
+    "status": "npm run build && node dist/examples/status.js",
+    "report": "npm run build && node dist/examples/report.js"
   },
   "keywords": [
     "wap",
