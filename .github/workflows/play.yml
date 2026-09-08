@@ -2,6 +2,11 @@ name: WAP Auto Play & Status Report
 
 on:
   workflow_dispatch:
+    inputs:
+      max_steps:
+        description: '最大执行步数'
+        required: false
+        default: '50'
   schedule:
     # 每 6 小时运行一次
     - cron: '0 */6 * * *'
@@ -39,7 +44,7 @@ jobs:
           MAAS_XUNFEI_API_KEY: ${{ secrets.MAAS_XUNFEI_API_KEY }}
           WAP_USERNAME: ${{ secrets.WAP_USERNAME }}
           WAP_PASSWORD: ${{ secrets.WAP_PASSWORD }}
-          LOOP_MAX_STEPS: '10'
+          LOOP_MAX_STEPS: ${{ github.event.inputs.max_steps || '50' }}
         run: node dist/examples/report.js
 
       - name: Commit status report
