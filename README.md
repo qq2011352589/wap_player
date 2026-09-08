@@ -101,6 +101,9 @@ npm run build
 
 # 4. 运行完整游戏循环（默认 20 步）
 npm run play
+
+# 5. 查看当前游戏状态（登录态/页面/资源/可选操作）
+npm run status
 ```
 
 ### 命令行参数
@@ -120,6 +123,31 @@ node dist/examples/smoke.js
 ```
 
 该测试覆盖：登录 → 页面解析 → 操作构建 → 资源识别 → 免费AI决策 → 操作执行全链路。
+
+### 查看运行状态
+
+有三种方式观察状态：
+
+| 方式 | 说明 |
+|------|------|
+| 实时日志 | 每步输出决策来源（`free-ai`/`heuristic`）、决策理由、执行的操作 |
+| `npm run status` | 查看当前登录态、页面标题/地址、识别资源、可选操作列表 |
+| `LoopResult` | 运行结束后返回：步数、访问过的页面、最后资源、停止原因 |
+
+```bash
+# 查看登录后的入口页状态
+npm run status
+
+# 登录后跳转到指定页面查看状态
+node dist/examples/status.js "http://fysg.n6game.cn/game/..."
+```
+
+保存运行日志便于持续追踪：
+
+```bash
+npm run play > run.log 2>&1 &
+tail -f run.log
+```
 
 ---
 
