@@ -1,0 +1,29 @@
+{
+  "name": "wap-game-play-framework",
+  "version": "1.0.0",
+  "description": "WAP游戏AI玩化工框架 - 用免费AI(spark-x2.5-1.7b)驱动WAP文字游戏自动决策，游戏过程零付费token",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "start": "node dist/examples/play.js",
+    "play": "npm run build && node dist/examples/play.js"
+  },
+  "keywords": [
+    "wap",
+    "game",
+    "ai",
+    "framework",
+    "spark",
+    "automation"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.4"
+  }
+}
