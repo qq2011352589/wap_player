@@ -28,7 +28,10 @@ export class Logger {
   }
 
   private enabled(level: LogLevel): boolean {
-    return ORDER[level] >= ORDER[this.level];
+    // 未知级别回退到 info 权重，避免非法配置把日志全部静默
+    const current = ORDER[this.level] ?? ORDER.info;
+    const target = ORDER[level] ?? ORDER.info;
+    return target >= current;
   }
 
   debug(message: string, ...rest: unknown[]): void {

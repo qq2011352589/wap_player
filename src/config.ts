@@ -110,6 +110,20 @@ function loadDotEnv(): void {
   }
 }
 
+/** 合法日志级别，用于校验 LOG_LEVEL。 */
+const LOG_LEVELS: readonly LogLevel[] = ['debug', 'info', 'warn', 'error', 'silent'];
+
+/** 解析环境变量数字；非法值回退并告警，绝不静默变成 NaN 关闭护栏。 */
+function parseFiniteNumber(raw: string | undefined, fallback: number): number {
+  if (raw === undefined || raw.trim() === '') return fallback;
+  const value = Number(raw);
+  if (!Number.isFinite(value)) {
+    logger.warn(`忽略非法数字环境变量值：${raw}`);
+    return fallback;
+  }
+  return value;
+}
+
 /**
  * 加载配置。优先级：显式 overrides < 环境变量 < 内置默认值。
  */
@@ -129,12 +143,26 @@ export function loadConfig(overrides?: ConfigOverrides): FrameworkConfig {
   game.username = env.WAP_USERNAME || game.username;
   game.password = env.WAP_PASSWORD || game.password;
 
-  if (env.LOOP_MAX_STEPS) loop.maxSteps = Number(env.LOOP_MAX_STEPS);
-  if (env.LOOP_STEP_DELAY_MS) loop.stepDelayMs = Number(env.LOOP_STEP_DELAY_MS);
-  if (env.LOOP_MAX_REPEATED_URLS) loop.maxRepeatedUrls = Number(env.LOOP_MAX_REPEATED_URLS);
-  if (env.LOOP_MAX_RUNTIME_MINUTES) loop.maxRuntimeMs = Number(env.LOOP_MAX_RUNTIME_MINUTES) * 60_000;
+  if (env.LOOP_MAX_STEPS) loop.maxSteps = parseFiniteNumber(env.LOOP_MAX_STEPS, loop.maxSteps);
+  if (env.LOOP_STEP_DELAY_MS) {
+    loop.stepDelayMs = parseFiniteNumber(env.LOOP_STEP_DELAY_MS, loop.stepDelayMs);
+  }
+  if (env.LOOP_MAX_REPEATED_URLS) {
+    loop.maxRepeatedUrls = parseFiniteNumber(env.LOOP_MAX_REPEATED_URLS, loop.maxRepeatedUrls);
+  }
+  if (env.LOOP_MAX_RUNTIME_MINUTES) {
+    const minutes = parseFiniteNumber(env.LOOP_MAX_RUNTIME_MINUTES, loop.maxRuntimeMs / 60_000);
+    loop.maxRuntimeMs = minutes * 60_000;
+  }
 
-  const logLevel = (env.LOG_LEVEL as LogLevel | undefined) ?? overrides?.logLevel ?? DEFAULTS.logLevel;
+  const rawLogLevel = env.LOG_LEVEL;
+  const validLogLevel = rawLogLevel && LOG_LEVELS.includes(rawLogLevel as LogLevel);
+  if (rawLogLevel && !validLogLevel) {
+    logger.warn(`忽略非法 LOG_LEVEL：${rawLogLevel}`);
+  }
+  const logLevel: LogLevel = validLogLevel
+    ? (rawLogLevel as LogLevel)
+    : (overrides?.logLevel ?? DEFAULTS.logLevel);
 
   const config: FrameworkConfig = {
     ai,
