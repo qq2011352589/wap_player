@@ -5,13 +5,15 @@
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "check": "tsc -p tsconfig.json --noEmit",
+    "build": "node node_modules/typescript/bin/tsc -p tsconfig.json",
+    "check": "node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit",
     "start": "node dist/examples/play.js",
     "play": "npm run build && node dist/examples/play.js",
     "status": "npm run build && node dist/examples/status.js",
     "report": "npm run build && node dist/examples/report.js",
-    "analyze": "npm run build && node dist/examples/analyze.js"
+    "analyze": "npm run build && node dist/examples/analyze.js",
+    "test": "npm run build && node --test \"dist/tests/**/*.test.js\"",
+    "test:run": "node --test \"dist/tests/**/*.test.js\""
   },
   "keywords": [
     "wap",
