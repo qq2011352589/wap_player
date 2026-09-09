@@ -53,7 +53,18 @@ export class GameLoop {
     let lastUrl = '';
     let sameUrlStreak = 0;
 
+    const startedAt = Date.now();
     for (let step = 0; step < stepLimit; step++) {
+      if (this.config.maxRuntimeMs > 0 && Date.now() - startedAt >= this.config.maxRuntimeMs) {
+        const runtimeLabel =
+          this.config.maxRuntimeMs >= 60_000
+            ? `${Math.round(this.config.maxRuntimeMs / 60_000)} 分钟`
+            : `${Math.round(this.config.maxRuntimeMs / 1000)} 秒`;
+        stopReason = `达到最长运行时间（${runtimeLabel}）`;
+        logger.info(stopReason);
+        break;
+      }
+
       const actions = buildActions(page);
       const state = this.stateManager.build(page, actions);
       visited.push(page.url);

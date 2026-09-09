@@ -34,6 +34,8 @@ export interface LoopConfig {
   stepDelayMs: number;
   /** 连续停留在同一页面的最大次数，用于打破死循环；0 表示禁用 */
   maxRepeatedUrls: number;
+  /** 最长运行时间（毫秒）；0 表示无限。用于在 CI 作业超时前优雅停止并提交报告 */
+  maxRuntimeMs: number;
 }
 
 export interface FrameworkConfig {
@@ -71,6 +73,7 @@ const DEFAULTS: FrameworkConfig = {
     maxSteps: 0,
     stepDelayMs: 800,
     maxRepeatedUrls: 5,
+    maxRuntimeMs: 0,
   },
   logLevel: 'info',
 };
@@ -110,6 +113,7 @@ export function loadConfig(overrides?: ConfigOverrides): FrameworkConfig {
   if (env.LOOP_MAX_STEPS) loop.maxSteps = Number(env.LOOP_MAX_STEPS);
   if (env.LOOP_STEP_DELAY_MS) loop.stepDelayMs = Number(env.LOOP_STEP_DELAY_MS);
   if (env.LOOP_MAX_REPEATED_URLS) loop.maxRepeatedUrls = Number(env.LOOP_MAX_REPEATED_URLS);
+  if (env.LOOP_MAX_RUNTIME_MINUTES) loop.maxRuntimeMs = Number(env.LOOP_MAX_RUNTIME_MINUTES) * 60_000;
 
   const logLevel = (env.LOG_LEVEL as LogLevel | undefined) ?? overrides?.logLevel ?? DEFAULTS.logLevel;
 
