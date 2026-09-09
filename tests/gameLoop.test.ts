@@ -84,6 +84,21 @@ class ThrowingClient {
   }
 }
 
+class AlternatingClient {
+  private index = 0;
+  constructor(private readonly pages: WapPage[]) {}
+  async enter(): Promise<WapPage> {
+    return this.pages[0]!;
+  }
+  async fetch(): Promise<WapPage> {
+    return this.pages[0]!;
+  }
+  async execute(): Promise<WapPage> {
+    this.index = (this.index + 1) % this.pages.length;
+    return this.pages[this.index]!;
+  }
+}
+
 class FixedController {
   constructor(private readonly actionId: string) {}
   async choose(): Promise<Decision> {
@@ -133,5 +148,16 @@ describe('GameLoop 安全与韧性', () => {
     const loop = makeLoop(new ThrowingClient(), new FixedController('L0'), { maxSteps: 1 });
     const result = await loop.run();
     assert.match(result.stopReason, /失败/);
+  });
+
+  it('RED B: A↔B 交替循环应被检测并停止', async () => {
+    const pageA = makePage('http://h/a', [linkAction('L0', '前往', 'http://h/a')]);
+    const pageB = makePage('http://h/b', [linkAction('L0', '前往', 'http://h/b')]);
+    const loop = makeLoop(new AlternatingClient([pageA, pageB]), new FixedController('L0'), {
+      maxSteps: 12,
+      maxRepeatedUrls: 5,
+    });
+    const result = await loop.run();
+    assert.match(result.stopReason, /循环/);
   });
 });

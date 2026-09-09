@@ -89,6 +89,8 @@ export interface GameState {
   resources: Record<string, number>;
   actions: GameAction[];
   timestamp: number;
+  /** 可选提示（例如检测到循环时提示 AI 换操作） */
+  hint?: string;
 }
 
 /** 决策来源。 */

@@ -78,17 +78,18 @@ export class FreeAIModel {
       Object.entries(state.resources)
         .map(([key, value]) => `${key}=${value}`)
         .join('，') || '（未识别）';
-    return [
+
+    const lines = [
       `当前页面标题：${state.title}`,
       `当前页面地址：${state.url}`,
       `已识别资源：${resourceLines}`,
       `页面正文摘要：${state.text.slice(0, 1200)}`,
-      '',
-      '可选操作：',
-      actionLines,
-      '',
-      '请选择最有利于长期发展、且不会消耗元宝的操作。',
-    ].join('\n');
+    ];
+    if (state.hint) {
+      lines.push(`重要提示：${state.hint}`);
+    }
+    lines.push('', '可选操作：', actionLines, '', '请选择最有利于长期发展、且不会消耗元宝的操作。');
+    return lines.join('\n');
   }
 
   /** 推理模型偶尔会把全部额度用于思考，这里在空返回时自动加大额度重试一次。 */

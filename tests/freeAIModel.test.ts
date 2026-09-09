@@ -96,4 +96,21 @@ describe('FreeAIModel 决策解析', () => {
     assert.equal(decision.source, 'free-ai');
     assert.equal(decision.actionId, 'L0');
   });
+
+  it('hint 应出现在 AI 提示词中', async (t) => {
+    let capturedBody = '';
+    t.mock.method(globalThis, 'fetch', async (_url: string, init?: RequestInit) => {
+      capturedBody = String(init?.body ?? '');
+      return new Response(
+        JSON.stringify({
+          choices: [{ message: { content: '{"actionId":"L0","rationale":"x","confidence":0.5}' } }],
+        }),
+        { status: 200 },
+      );
+    });
+    const state = makeState(['L0']);
+    state.hint = '检测到循环，请换操作';
+    await new FreeAIModel(CONFIG).decide(state);
+    assert.match(capturedBody, /检测到循环/);
+  });
 });

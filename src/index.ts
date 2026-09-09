@@ -24,6 +24,7 @@ export { GameClient } from './client/GameClient';
 export { WapParser } from './client/WapParser';
 export { buildActions } from './game/actionBuilder';
 export { GameLoop } from './game/GameLoop';
+export { detectUrlCycle } from './game/loopDetection';
 export { GameStateManager } from './game/GameStateManager';
 export type { ResourceSnapshot } from './resource/ResourceManager';
 export { PAID_TOKEN_TYPES, ResourceManager } from './resource/ResourceManager';

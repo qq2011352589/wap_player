@@ -13,6 +13,7 @@ import { isForbiddenAction } from '../safety';
 import type { LoopResult, WapPage } from '../types';
 import { buildActions } from './actionBuilder';
 import type { GameStateManager } from './GameStateManager';
+import { detectUrlCycle } from './loopDetection';
 
 export class GameLoop {
   private readonly client: GameClient;
@@ -39,6 +40,8 @@ export class GameLoop {
     let stopReason = this.config.maxSteps > 0 ? '达到最大步数' : '无限循环（外部终止）';
     let lastUrl = '';
     let sameUrlStreak = 0;
+    const urlHistory: string[] = [];
+    let cycleNudged = false;
 
     let page: WapPage;
     try {
@@ -83,6 +86,23 @@ export class GameLoop {
         stopReason = `连续 ${sameUrlStreak + 1} 次停留在同一页面，疑似死循环：${page.url}`;
         logger.warn(stopReason);
         break;
+      }
+
+      // 交替循环检测（A→B→A→B / A→B→C→A→B→C）：先提示 AI 换操作，再犯则停止
+      urlHistory.push(page.url);
+      if (urlHistory.length > 12) urlHistory.shift();
+      const cycle = detectUrlCycle(urlHistory, 3);
+      if (cycle !== null) {
+        if (cycleNudged) {
+          stopReason = `检测到页面循环（周期 ${cycle}）：${page.url}`;
+          logger.warn(stopReason);
+          break;
+        }
+        cycleNudged = true;
+        state.hint = `检测到页面循环（周期 ${cycle}），请选择一个与最近不同的操作。`;
+        logger.info('检测到循环，已提示 AI 换操作');
+      } else {
+        cycleNudged = false;
       }
 
       const decision = await this.controller.choose(state);
