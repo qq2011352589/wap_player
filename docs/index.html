@@ -31,27 +31,51 @@
 <body>
   <h1>WAPGamePlayFramework · 状态报告</h1>
   <div class="meta">
-    生成时间：2026-09-09T03:12:23.882Z ·
+    生成时间：2026-09-09T03:15:04.938Z ·
     免费AI模型：spark-x2.5-1.7b
   </div>
 
   <div class="cards">
-    <div class="card"><div class="label">执行步数</div><div class="value">1</div></div>
-    <div class="card"><div class="label">免费AI决策</div><div class="value">0</div></div>
-    <div class="card"><div class="label">启发式兜底</div><div class="value">1</div></div>
-    <div class="card"><div class="label">停止原因</div><div class="value" style="font-size:14px">达到最长运行时间（0 分钟）</div></div>
+    <div class="card"><div class="label">执行步数</div><div class="value">5</div></div>
+    <div class="card"><div class="label">免费AI决策</div><div class="value">5</div></div>
+    <div class="card"><div class="label">启发式兜底</div><div class="value">0</div></div>
+    <div class="card"><div class="label">停止原因</div><div class="value" style="font-size:14px">达到最大步数</div></div>
   </div>
 
   <h2>资源状态</h2>
-  <table><thead><tr><th>资源</th><th>数量</th></tr></thead><tbody><tr><td colspan="2" class="muted">当前会话未识别到资源数值</td></tr></tbody></table>
+  <table><thead><tr><th>资源</th><th>数量</th></tr></thead><tbody><tr><td>gold</td><td>100</td></tr></tbody></table>
 
   <h2>决策记录</h2>
   <table><thead><tr><th>#</th><th>来源</th><th>操作</th><th>理由</th><th>置信度</th></tr></thead><tbody><tr>
           <td>1</td>
-          <td><span class="badge heuristic">heuristic</span></td>
+          <td><span class="badge free-ai">free-ai</span></td>
           <td>L0</td>
-          <td>启发式：无明确目标，选择第一个可用操作</td>
-          <td>0.20</td>
+          <td>进入当前推荐新区“指点江山[7区](新)”，可获取新活动资源，利于长期发展，且不消耗付费货币</td>
+          <td>0.90</td>
+        </tr><tr>
+          <td>2</td>
+          <td><span class="badge free-ai">free-ai</span></td>
+          <td>L0</td>
+          <td>直接进入选角并选择角色，推进游戏任务与资源获取，利于长期发展</td>
+          <td>0.90</td>
+        </tr><tr>
+          <td>3</td>
+          <td><span class="badge free-ai">free-ai</span></td>
+          <td>L5</td>
+          <td>进入游戏可参与活动、任务与资源采集，利于长期发展且不会消耗付费货币</td>
+          <td>0.95</td>
+        </tr><tr>
+          <td>4</td>
+          <td><span class="badge free-ai">free-ai</span></td>
+          <td>L6</td>
+          <td>查看可接任务，可推进任务推进，获取奖励资源，且不消耗付费货币</td>
+          <td>0.90</td>
+        </tr><tr>
+          <td>5</td>
+          <td><span class="badge free-ai">free-ai</span></td>
+          <td>L0</td>
+          <td>前往「大院」击杀窃贼，推进当前任务，获得经验与银两奖励，有利于任务完成和长期发展</td>
+          <td>0.90</td>
         </tr></tbody></table>
 
   <h2>页面轨迹</h2>
@@ -60,6 +84,26 @@
           <td>風雲三國(选区)</td>
           <td class="url">http://fysg.n6game.cn/tdcq_player/index/?username=a1345772&amp;password=a1345772</td>
           <td>10</td>
+        </tr><tr>
+          <td>2</td>
+          <td>風雲三國(选角)</td>
+          <td class="url">http://fysg.n6game.cn/game/chose_fenqu/?id=7&amp;tic=7288a56c</td>
+          <td>2</td>
+        </tr><tr>
+          <td>3</td>
+          <td>風雲三國-迎国庆！90版本，全新资料片-指点江山[7区]</td>
+          <td class="url">http://fysg.n6game.cn/game/d/?ck=95ffd2fc&amp;tic=8bdf7d5a</td>
+          <td>7</td>
+        </tr><tr>
+          <td>4</td>
+          <td>風雲三國-迎国庆！90版本，全新资料片-指点江山[7区]</td>
+          <td class="url">http://fysg.n6game.cn/game/d/?ck=3f268fed&amp;tic=70d252fe&amp;aid=36e66a3f</td>
+          <td>30</td>
+        </tr><tr>
+          <td>5</td>
+          <td>風雲三國-迎国庆！90版本，全新资料片-指点江山[7区]</td>
+          <td class="url">http://fysg.n6game.cn/game/d/?ck=7fed349d&amp;tic=74b3ea6f&amp;aid=56d0efbf</td>
+          <td>3</td>
         </tr></tbody></table>
 
   <footer>由 GitHub Actions 自动生成 · 游戏过程由免费AI（spark-x2.5-1.7b）决策，零付费 token</footer>
