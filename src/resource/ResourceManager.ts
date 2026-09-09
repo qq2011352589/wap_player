@@ -30,14 +30,16 @@ export class ResourceManager {
   update(text: string, step: number): void {
     for (const { keywords, type } of LABELS) {
       for (const keyword of keywords) {
-        const pattern = new RegExp(`${keyword}[^0-9]{0,6}([0-9][0-9,]*)`);
+        const pattern = new RegExp(
+          `${keyword}[^0-9+\\-]{0,6}([+\\-])?\\s*([0-9][0-9,]*)\\s*([万亿])?`,
+        );
         const match = text.match(pattern);
-        if (!match?.[1]) continue;
-        const amount = Number(match[1].replace(/,/g, ''));
-        if (!Number.isNaN(amount)) {
-          this.current[type] = amount;
-          break;
-        }
+        if (!match?.[2]) continue;
+        const magnitude = Number(match[2].replace(/,/g, ''));
+        if (Number.isNaN(magnitude)) continue;
+        const multiplier = match[3] === '万' ? 10_000 : match[3] === '亿' ? 100_000_000 : 1;
+        this.current[type] = (match[1] === '-' ? -1 : 1) * magnitude * multiplier;
+        break;
       }
     }
     this.history.push({ step, resources: { ...this.current } });

@@ -31,4 +31,22 @@ describe('ResourceManager', () => {
     assert.equal(history.length, 2);
     assert.equal(history[1]?.resources.food, 200);
   });
+
+  it('F11: 支持万单位', () => {
+    const rm = new ResourceManager();
+    rm.update('粮食 1万', 1);
+    assert.equal(rm.get('food'), 10000);
+  });
+
+  it('F11: 支持亿单位', () => {
+    const rm = new ResourceManager();
+    rm.update('粮食 2亿', 1);
+    assert.equal(rm.get('food'), 200000000);
+  });
+
+  it('F11: 支持负号', () => {
+    const rm = new ResourceManager();
+    rm.update('粮食 -50', 1);
+    assert.equal(rm.get('food'), -50);
+  });
 });
