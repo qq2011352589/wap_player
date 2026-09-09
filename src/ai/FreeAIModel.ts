@@ -6,6 +6,7 @@
  */
 
 import type { AIConfig } from '../config';
+import { sanitizeFieldValues } from '../game/actionBuilder';
 import { logger } from '../logger';
 import type { Decision, GameState } from '../types';
 
@@ -216,7 +217,12 @@ export class FreeAIModel {
     const confidenceRaw = typeof obj.confidence === 'number' ? obj.confidence : 0.5;
     const confidence = Math.max(0, Math.min(1, confidenceRaw));
 
-    const fieldValues = this.parseFieldValues(obj.fieldValues);
+    const action = state.actions.find((item) => item.id === actionId);
+    const rawFieldValues = this.parseFieldValues(obj.fieldValues);
+    const fieldValues =
+      action?.kind === 'form' && action.form
+        ? sanitizeFieldValues(action.form, rawFieldValues)
+        : rawFieldValues;
 
     return { actionId, rationale, confidence, source: 'free-ai', fieldValues };
   }

@@ -5,7 +5,7 @@
 
 import { describe, it, type TestContext } from 'node:test';
 import assert from 'node:assert/strict';
-import { FreeAIModel, type AIConfig, type GameState } from '../src/index';
+import { FreeAIModel, type AIConfig, type FormField, type GameState } from '../src/index';
 
 const CONFIG: AIConfig = {
   baseURL: 'http://ai/v1',
@@ -42,6 +42,25 @@ function makeState(ids: string[]): GameState {
       label: `[链接] ${id}`,
       link: { label: id, href: `http://h/${id}`, raw: `/${id}` },
     })),
+    timestamp: 0,
+  };
+}
+
+function makeFormState(fields: FormField[]): GameState {
+  return {
+    step: 1,
+    url: 'http://h/',
+    title: 't',
+    text: '',
+    resources: {},
+    actions: [
+      {
+        id: 'F0',
+        kind: 'form',
+        label: '[表单]',
+        form: { action: 'http://h/do', method: 'POST', fields },
+      },
+    ],
     timestamp: 0,
   };
 }
@@ -137,5 +156,67 @@ describe('FreeAIModel 决策解析', () => {
     const decision = await new FreeAIModel(CONFIG).decide(makeState(['L0']));
     assert.equal(decision.source, 'free-ai');
     assert.equal(decision.actionId, 'L0');
+  });
+
+  it('F10: 未知字段应被丢弃', async (t) => {
+    mockAIContent(
+      t,
+      '{"actionId":"F0","rationale":"x","confidence":0.5,"fieldValues":{"keyword":"粮","evil":"x"}}',
+    );
+    const decision = await new FreeAIModel(CONFIG).decide(
+      makeFormState([{ name: 'keyword', type: 'text', value: '' }]),
+    );
+    assert.deepEqual(decision.fieldValues, { keyword: '粮' });
+  });
+
+  it('F10: 隐藏字段(csrf)不可被覆盖', async (t) => {
+    mockAIContent(
+      t,
+      '{"actionId":"F0","rationale":"x","confidence":0.5,"fieldValues":{"csrf":"hack","keyword":"ok"}}',
+    );
+    const decision = await new FreeAIModel(CONFIG).decide(
+      makeFormState([
+        { name: 'csrf', type: 'hidden', value: 'real' },
+        { name: 'keyword', type: 'text', value: '' },
+      ]),
+    );
+    assert.deepEqual(decision.fieldValues, { keyword: 'ok' });
+  });
+
+  it('F10: 非法下拉值应被丢弃', async (t) => {
+    mockAIContent(
+      t,
+      '{"actionId":"F0","rationale":"x","confidence":0.5,"fieldValues":{"type":"999"}}',
+    );
+    const decision = await new FreeAIModel(CONFIG).decide(
+      makeFormState([
+        {
+          name: 'type',
+          type: 'select',
+          value: '1',
+          options: [{ value: '1', label: '粮食', selected: true }],
+        },
+      ]),
+    );
+    assert.equal(decision.fieldValues, undefined);
+  });
+
+  it('F10: 合法字段保留，下拉 label 归一化为 value', async (t) => {
+    mockAIContent(
+      t,
+      '{"actionId":"F0","rationale":"x","confidence":0.5,"fieldValues":{"keyword":"粮","type":"粮食"}}',
+    );
+    const decision = await new FreeAIModel(CONFIG).decide(
+      makeFormState([
+        { name: 'keyword', type: 'text', value: '' },
+        {
+          name: 'type',
+          type: 'select',
+          value: '1',
+          options: [{ value: '1', label: '粮食', selected: true }],
+        },
+      ]),
+    );
+    assert.deepEqual(decision.fieldValues, { keyword: '粮', type: '1' });
   });
 });
