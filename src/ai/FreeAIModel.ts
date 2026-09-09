@@ -146,19 +146,56 @@ export class FreeAIModel {
     }
   }
 
-  private parseDecision(content: string, state: GameState): Decision | null {
-    const match = content.match(/\{[\s\S]*\}/);
-    if (!match) return null;
+  /** 提取第一个完整 JSON 对象（尊重字符串/转义，支持多余花括号与多对象）。 */
+  private extractFirstJsonObject(content: string): Record<string, unknown> | null {
+    const direct = this.tryParseObject(content.trim());
+    if (direct) return direct;
 
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(match[0]);
-    } catch {
-      return null;
+    for (let start = 0; start < content.length; start++) {
+      if (content[start] !== '{') continue;
+      let depth = 0;
+      let inString = false;
+      let escaped = false;
+      for (let i = start; i < content.length; i++) {
+        const ch = content[i]!;
+        if (inString) {
+          if (escaped) escaped = false;
+          else if (ch === '\\') escaped = true;
+          else if (ch === '"') inString = false;
+          continue;
+        }
+        if (ch === '"') {
+          inString = true;
+        } else if (ch === '{') {
+          depth += 1;
+        } else if (ch === '}') {
+          depth -= 1;
+          if (depth === 0) {
+            const parsed = this.tryParseObject(content.slice(start, i + 1));
+            if (parsed) return parsed;
+            break;
+          }
+        }
+      }
     }
-    if (typeof parsed !== 'object' || parsed === null) return null;
+    return null;
+  }
 
-    const obj = parsed as Record<string, unknown>;
+  private tryParseObject(text: string): Record<string, unknown> | null {
+    try {
+      const parsed: unknown = JSON.parse(text);
+      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+        return parsed as Record<string, unknown>;
+      }
+    } catch {
+      // 忽略，继续扫描
+    }
+    return null;
+  }
+
+  private parseDecision(content: string, state: GameState): Decision | null {
+    const obj = this.extractFirstJsonObject(content);
+    if (!obj) return null;
     const rawId = obj.actionId ?? obj.action ?? obj.id;
     const actionId = rawId === undefined || rawId === null ? null : String(rawId);
     if (actionId === null || !state.actions.some((action) => action.id === actionId)) {
