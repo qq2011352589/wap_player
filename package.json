@@ -10,7 +10,8 @@
     "start": "node dist/examples/play.js",
     "play": "npm run build && node dist/examples/play.js",
     "status": "npm run build && node dist/examples/status.js",
-    "report": "npm run build && node dist/examples/report.js"
+    "report": "npm run build && node dist/examples/report.js",
+    "analyze": "npm run build && node dist/examples/analyze.js"
   },
   "keywords": [
     "wap",

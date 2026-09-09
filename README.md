@@ -112,12 +112,29 @@ npm run check
 # 3. 构建
 npm run build
 
-# 4. 运行完整游戏循环（默认 20 步）
+# 4. 运行完整游戏循环（默认无限步数）
 npm run play
 
 # 5. 查看当前游戏状态（登录态/页面/资源/可选操作）
 npm run status
+
+# 6. 诊断页面 JS 依赖（接入新游戏时先跑这个）
+npm run analyze
+
+# 7. 生成 HTML 状态报告
+npm run report
 ```
+
+### 账号配置（安全）
+
+账号密码**不再硬编码**在代码中。请在项目根目录创建 `.env`（已被 `.gitignore` 排除）：
+
+```bash
+WAP_USERNAME=你的账号
+WAP_PASSWORD=你的密码
+```
+
+框架会按 `显式配置 > 环境变量 > .env 文件 > 默认值` 的顺序读取。GitHub Actions 中则使用仓库 Secrets。
 
 ### 命令行参数
 

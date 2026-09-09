@@ -64,8 +64,8 @@ const DEFAULTS: FrameworkConfig = {
   },
   game: {
     entryUrl: 'http://fysg.n6game.cn/tdcq_player/index/',
-    username: 'a1345772',
-    password: 'a1345772',
+    username: '',
+    password: '',
     userAgent:
       'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Mobile Safari/537.36 WAPGamePlayFramework/1.0',
   },
@@ -92,10 +92,29 @@ function readXunfeiKeyFromOpencode(): string {
   }
 }
 
+/** 读取当前目录下的 .env（若存在），把键值注入 process.env（不覆盖已有值）。 */
+function loadDotEnv(): void {
+  try {
+    const raw = readFileSync(join(process.cwd(), '.env'), 'utf8');
+    for (const line of raw.split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const eq = trimmed.indexOf('=');
+      if (eq <= 0) continue;
+      const key = trimmed.slice(0, eq).trim();
+      const value = trimmed.slice(eq + 1).trim().replace(/^["']|["']$/g, '');
+      if (!(key in process.env)) process.env[key] = value;
+    }
+  } catch {
+    // 无 .env 文件时忽略
+  }
+}
+
 /**
  * 加载配置。优先级：显式 overrides < 环境变量 < 内置默认值。
  */
 export function loadConfig(overrides?: ConfigOverrides): FrameworkConfig {
+  loadDotEnv();
   const env = process.env;
 
   const ai: AIConfig = { ...DEFAULTS.ai, ...(overrides?.ai ?? {}) };
