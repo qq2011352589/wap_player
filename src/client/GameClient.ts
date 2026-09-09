@@ -48,22 +48,29 @@ export class GameClient {
     }
 
     if (action.kind === 'form' && action.form) {
-      const data: Record<string, string> = {};
+      // 用 URLSearchParams.append 保留重名字段（F18）
+      const params = new URLSearchParams();
       for (const field of action.form.fields) {
-        data[field.name] = field.value;
+        params.append(field.name, field.value);
       }
       if (fieldValues) {
         for (const [name, value] of Object.entries(fieldValues)) {
-          data[name] = value;
+          params.append(name, value);
         }
       }
-      logger.debug(`提交表单字段：${JSON.stringify(data)}`);
-      const response =
-        action.form.method === 'POST'
-          ? await this.http.post(action.form.action, data)
-          : await this.http.get(
-              `${action.form.action}?${new URLSearchParams(data).toString()}`,
-            );
+      logger.debug(`提交表单字段：${params.toString()}`);
+
+      if (action.form.method === 'POST') {
+        const response = await this.http.post(action.form.action, params);
+        return this.parser.parse(response.url, response.body);
+      }
+
+      // GET：合并到已有 query，而不是再拼一个 ?（F9）
+      const url = new URL(action.form.action);
+      for (const [name, value] of params) {
+        url.searchParams.append(name, value);
+      }
+      const response = await this.http.get(url.toString());
       return this.parser.parse(response.url, response.body);
     }
 

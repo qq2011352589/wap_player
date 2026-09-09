@@ -48,8 +48,9 @@ export class HttpClient {
     return this.request('GET', url);
   }
 
-  async post(url: string, data: Record<string, string>): Promise<HttpResponse> {
-    const body = new URLSearchParams(data).toString();
+  async post(url: string, data: URLSearchParams | Record<string, string>): Promise<HttpResponse> {
+    const body =
+      data instanceof URLSearchParams ? data.toString() : new URLSearchParams(data).toString();
     return this.request('POST', url, body, 'application/x-www-form-urlencoded');
   }
 
