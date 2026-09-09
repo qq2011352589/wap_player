@@ -123,7 +123,25 @@ npm run analyze
 
 # 7. 生成 HTML 状态报告
 npm run report
+
+# 8. 运行测试套件（零依赖，Node 内置 node:test）
+npm test
 ```
+
+### 测试
+
+测试套件使用 Node 内置 `node:test`（零外部依赖），编译到 `dist/tests` 后由 `node --test` 运行：
+
+```bash
+npm test          # 构建 + 运行全部测试
+npm run test:run  # 仅运行（已构建）
+```
+
+覆盖：WapParser / actionBuilder / GameClient / ResourceManager / config / GameLoop / FreeAIModel。
+
+### GitHub Actions 运行时长
+
+手动触发工作流时可指定 `max_runtime_minutes`（默认 300），配合作业 `timeout-minutes: 350`，确保在作业超时前优雅停止并提交报告。
 
 ### 账号配置（安全）
 
