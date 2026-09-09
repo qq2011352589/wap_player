@@ -12,8 +12,8 @@
     "status": "npm run build && node dist/examples/status.js",
     "report": "npm run build && node dist/examples/report.js",
     "analyze": "npm run build && node dist/examples/analyze.js",
-    "test": "npm run build && node --test \"dist/tests/**/*.test.js\"",
-    "test:run": "node --test \"dist/tests/**/*.test.js\""
+    "test": "npm run build && node --test dist/tests/*.test.js",
+    "test:run": "node --test dist/tests/*.test.js"
   },
   "keywords": [
     "wap",
