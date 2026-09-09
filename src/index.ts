@@ -27,5 +27,6 @@ export { GameLoop } from './game/GameLoop';
 export { GameStateManager } from './game/GameStateManager';
 export type { ResourceSnapshot } from './resource/ResourceManager';
 export { PAID_TOKEN_TYPES, ResourceManager } from './resource/ResourceManager';
+export { FORBIDDEN_KEYWORDS, isForbiddenAction } from './safety';
 export type { ReportInput } from './report/HtmlReport';
 export { renderHtmlReport } from './report/HtmlReport';

@@ -1,30 +1,18 @@
 /**
  * GameLoop - 游戏主循环。
  *
- * 流程：拉取页面 -> 解析可执行操作 -> 构建状态 -> AI 决策 -> 执行操作 -> 循环。
- * 内建安全护栏：最大步数、页面重复次数上限、付费/退出操作拦截。
+ * 流程：拉取页面 -> 过滤禁用操作 -> 构建状态 -> AI 决策 -> 执行操作 -> 循环。
+ * 护栏：最大步数(0=无限)、最长运行时间、连续同页面、付费/退出拦截、网络异常优雅停止。
  */
 
 import type { AIController } from '../ai/AIController';
 import type { GameClient } from '../client/GameClient';
 import type { LoopConfig } from '../config';
 import { logger } from '../logger';
-import type { GameAction, LoopResult } from '../types';
+import { isForbiddenAction } from '../safety';
+import type { LoopResult, WapPage } from '../types';
 import { buildActions } from './actionBuilder';
 import type { GameStateManager } from './GameStateManager';
-
-/** 禁止执行的操作关键词（付费/退出）。 */
-const FORBIDDEN_KEYWORDS = [
-  '退出登陆',
-  '退出登录',
-  '注销',
-  '充值',
-  '商城',
-  '购买',
-  '支付',
-  '元宝',
-  'VIP',
-];
 
 export class GameLoop {
   private readonly client: GameClient;
@@ -48,10 +36,18 @@ export class GameLoop {
     const visited: string[] = [];
     // maxSteps <= 0 表示无限步数（免费AI无成本顾虑）
     const stepLimit = this.config.maxSteps > 0 ? this.config.maxSteps : Number.POSITIVE_INFINITY;
-    let page = await this.client.enter();
     let stopReason = this.config.maxSteps > 0 ? '达到最大步数' : '无限循环（外部终止）';
     let lastUrl = '';
     let sameUrlStreak = 0;
+
+    let page: WapPage;
+    try {
+      page = await this.client.enter();
+    } catch (error) {
+      stopReason = `进入游戏失败：${(error as Error).message}`;
+      logger.warn(stopReason);
+      return { steps: 0, visited, lastState: null, stopReason };
+    }
 
     const startedAt = Date.now();
     for (let step = 0; step < stepLimit; step++) {
@@ -65,8 +61,15 @@ export class GameLoop {
         break;
       }
 
-      const actions = buildActions(page);
-      const state = this.stateManager.build(page, actions);
+      const allActions = buildActions(page);
+      const allowed = allActions.filter((action) => !isForbiddenAction(action));
+      if (allActions.length > 0 && allowed.length === 0) {
+        stopReason = `所有操作均命中付费/退出拦截：${allActions[0]?.label ?? ''}`;
+        logger.warn(stopReason);
+        break;
+      }
+
+      const state = this.stateManager.build(page, allowed);
       visited.push(page.url);
 
       // 死循环检测：连续停留在同一页面
@@ -83,7 +86,7 @@ export class GameLoop {
       }
 
       const decision = await this.controller.choose(state);
-      const action = actions.find((item) => item.id === decision.actionId) ?? null;
+      const action = allowed.find((item) => item.id === decision.actionId) ?? null;
 
       if (!action) {
         stopReason = '没有可执行的决策';
@@ -91,24 +94,27 @@ export class GameLoop {
         break;
       }
 
-      if (this.isForbidden(action)) {
+      // 二次防御：即便上层放行也再拦一次
+      if (isForbiddenAction(action)) {
         stopReason = `决策命中付费/退出操作，已拦截：${action.label}`;
         logger.warn(stopReason);
         break;
       }
 
       logger.info(`执行操作：${action.label}`);
-      page = await this.client.execute(action, decision.fieldValues);
+      try {
+        page = await this.client.execute(action, decision.fieldValues);
+      } catch (error) {
+        stopReason = `执行操作失败：${(error as Error).message}`;
+        logger.warn(stopReason);
+        break;
+      }
       await this.sleep(this.config.stepDelayMs);
     }
 
     const lastState = this.stateManager.current;
     logger.info(`游戏循环结束：${stopReason}（共 ${this.stateManager.step} 步）`);
     return { steps: this.stateManager.step, visited, lastState, stopReason };
-  }
-
-  private isForbidden(action: GameAction): boolean {
-    return FORBIDDEN_KEYWORDS.some((keyword) => action.label.includes(keyword));
   }
 
   private async sleep(ms: number): Promise<void> {

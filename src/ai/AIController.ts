@@ -3,10 +3,12 @@
  *
  * 优先使用免费AI（spark-x2.5-1.7b）决策；
  * 当AI不可用或返回非法结果时，退化为关键词启发式，保证框架始终可运行。
+ * 启发式绝不返回被禁用的操作（F4）。
  */
 
 import type { AIConfig } from '../config';
 import { logger } from '../logger';
+import { isForbiddenAction } from '../safety';
 import type { Decision, GameAction, GameState } from '../types';
 import { FreeAIModel } from './FreeAIModel';
 
@@ -39,23 +41,6 @@ const PREFERRED_KEYWORDS = [
   '确定',
 ];
 
-/** 禁止选择的操作关键词（付费/退出） */
-const FORBIDDEN_KEYWORDS = [
-  '退出登陆',
-  '退出登录',
-  '注销',
-  '充值',
-  '商城',
-  '购买',
-  '支付',
-  '元宝',
-  'VIP',
-  '礼包',
-  '删除',
-  '放弃',
-  '解散',
-];
-
 export class AIController {
   private readonly model: FreeAIModel;
   private readonly history: Decision[] = [];
@@ -80,25 +65,21 @@ export class AIController {
     return decision;
   }
 
-  /** 无 AI 时的启发式兜底。 */
+  /** 无 AI 时的启发式兜底；绝不返回被禁用的操作。 */
   heuristicDecide(state: GameState): Decision {
-    const scored = state.actions
-      .map((action) => ({ action, score: this.score(action) }))
-      .sort((a, b) => b.score - a.score);
-
-    const best = scored[0];
-    if (!best || best.score <= 0) {
-      const first = state.actions[0];
-      if (!first) {
-        return { actionId: null, rationale: '启发式：无可用操作', confidence: 0, source: 'fallback' };
-      }
+    const allowed = state.actions.filter((action) => !isForbiddenAction(action));
+    if (allowed.length === 0) {
       return {
-        actionId: first.id,
-        rationale: '启发式：无明确目标，选择第一个可用操作',
-        confidence: 0.2,
-        source: 'heuristic',
+        actionId: null,
+        rationale: '启发式：无可用（非禁用）操作',
+        confidence: 0,
+        source: 'fallback',
       };
     }
+
+    const best = allowed
+      .map((action) => ({ action, score: this.score(action) }))
+      .sort((a, b) => b.score - a.score)[0]!;
 
     return {
       actionId: best.action.id,
@@ -109,9 +90,6 @@ export class AIController {
   }
 
   private score(action: GameAction): number {
-    if (FORBIDDEN_KEYWORDS.some((keyword) => action.label.includes(keyword))) {
-      return -100;
-    }
     let score = 0;
     for (const keyword of PREFERRED_KEYWORDS) {
       if (action.label.includes(keyword)) score += 10;
