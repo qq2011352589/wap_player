@@ -65,6 +65,16 @@ describe('S1 正常页面解析（特征化）', () => {
     const page = parse('<a href="/x">A &amp; B &lt;C&gt;</a>');
     assert.equal(page.links[0]?.label, 'A & B <C>');
   });
+
+  it('F16: 解码十进制数字实体', () => {
+    const page = parse('<a href="/x">A &#8211; B</a>');
+    assert.equal(page.links[0]?.label, 'A – B');
+  });
+
+  it('F16: 解码十六进制数字实体', () => {
+    const page = parse('<a href="/x">&#x27;q&#x27;</a>');
+    assert.equal(page.links[0]?.label, "'q'");
+  });
 });
 
 describe('S2 边界与畸形输入（特征化）', () => {

@@ -236,6 +236,21 @@ export class WapParser {
   }
 
   private decode(value: string): string {
-    return value.replace(/&[a-z#0-9]+;/gi, (entity) => ENTITIES[entity.toLowerCase()] ?? entity);
+    return value.replace(
+      /&(#[xX][0-9a-fA-F]+|#[0-9]+|[a-z][a-z0-9]*);/gi,
+      (entity: string, body: string) => {
+        if (body.startsWith('#')) {
+          const code =
+            body[1] === 'x' || body[1] === 'X'
+              ? parseInt(body.slice(2), 16)
+              : parseInt(body.slice(1), 10);
+          if (Number.isInteger(code) && code >= 0 && code <= 0x10ffff) {
+            return String.fromCodePoint(code);
+          }
+          return entity;
+        }
+        return ENTITIES[entity.toLowerCase()] ?? entity;
+      },
+    );
   }
 }
