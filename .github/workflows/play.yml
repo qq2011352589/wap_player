@@ -7,6 +7,10 @@ on:
         description: '最大执行步数（0=无限）'
         required: false
         default: '0'
+      max_runtime_minutes:
+        description: '最长运行分钟数'
+        required: false
+        default: '300'
   schedule:
     # 每 6 小时运行一次
     - cron: '0 */6 * * *'
@@ -40,13 +44,23 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Test
+        run: npm test
+
+      - name: Analyze page interactions
+        continue-on-error: true
+        env:
+          WAP_USERNAME: ${{ secrets.WAP_USERNAME }}
+          WAP_PASSWORD: ${{ secrets.WAP_PASSWORD }}
+        run: node dist/examples/analyze.js
+
       - name: Play and generate status report
         env:
           MAAS_XUNFEI_API_KEY: ${{ secrets.MAAS_XUNFEI_API_KEY }}
           WAP_USERNAME: ${{ secrets.WAP_USERNAME }}
           WAP_PASSWORD: ${{ secrets.WAP_PASSWORD }}
           LOOP_MAX_STEPS: ${{ github.event.inputs.max_steps || '0' }}
-          LOOP_MAX_RUNTIME_MINUTES: '300'
+          LOOP_MAX_RUNTIME_MINUTES: ${{ github.event.inputs.max_runtime_minutes || '300' }}
         run: node dist/examples/report.js
 
       - name: Commit status report
