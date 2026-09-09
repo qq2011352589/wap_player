@@ -36,6 +36,11 @@ const SYSTEM_PROMPT = [
   '绝对不要选择会消耗付费货币（元宝）或退出登录的操作。',
 ].join('\n');
 
+interface ChatReply {
+  content: string;
+  reasoning: string;
+}
+
 export class FreeAIModel {
   private readonly config: AIConfig;
   private lastRequestAt = 0;
@@ -59,11 +64,13 @@ export class FreeAIModel {
 
     await this.throttle();
     try {
-      const content = await this.chatWithRetry([
+      const reply = await this.chatWithRetry([
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: this.buildUserPrompt(state) },
       ]);
-      const decision = this.parseDecision(content, state);
+      // 推理模型常把答案放在 reasoning_content 而 content 为空；两者都尝试
+      const decision =
+        this.parseDecision(reply.content, state) ?? this.parseDecision(reply.reasoning, state);
       if (decision) return decision;
       logger.warn('免费AI输出无法解析为有效决策，转用启发式');
     } catch (error) {
@@ -93,7 +100,7 @@ export class FreeAIModel {
   }
 
   /** 推理模型偶尔会把全部额度用于思考，这里在空返回时自动加大额度重试一次。 */
-  private async chatWithRetry(messages: ChatMessage[]): Promise<string> {
+  private async chatWithRetry(messages: ChatMessage[]): Promise<ChatReply> {
     try {
       return await this.chat(messages, this.config.maxTokens);
     } catch (error) {
@@ -107,7 +114,7 @@ export class FreeAIModel {
     }
   }
 
-  private async chat(messages: ChatMessage[], maxTokens: number): Promise<string> {
+  private async chat(messages: ChatMessage[], maxTokens: number): Promise<ChatReply> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.config.timeoutMs);
     try {
@@ -137,11 +144,13 @@ export class FreeAIModel {
         throw new Error(parsed.error.message ?? '未知AI错误');
       }
 
-      const content = parsed.choices?.[0]?.message?.content?.trim();
-      if (!content) {
+      const message = parsed.choices?.[0]?.message;
+      const content = message?.content?.trim() ?? '';
+      const reasoning = message?.reasoning_content?.trim() ?? '';
+      if (!content && !reasoning) {
         throw new Error('AI 返回内容为空（可能是 maxTokens 不足）');
       }
-      return content;
+      return { content, reasoning };
     } finally {
       clearTimeout(timer);
     }
