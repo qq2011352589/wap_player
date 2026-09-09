@@ -39,6 +39,8 @@ export interface FormField {
   placeholder?: string;
   /** 仅 select 类型有 */
   options?: SelectOption[];
+  /** 仅 checkbox / radio 有：是否勾选 */
+  checked?: boolean;
 }
 
 /** 页面上的一个表单。 */

@@ -20,14 +20,13 @@ const ENTITIES: Record<string, string> = {
 export class WapParser {
   parse(baseUrl: string, html: string): WapPage {
     const title = this.decode(this.firstMatch(html, /<title[^>]*>([\s\S]*?)<\/title>/i) ?? '');
-    const links = this.extractLinks(baseUrl, html);
     return {
       url: baseUrl,
       title: title.replace(/\s+/g, ' ').trim(),
       text: this.extractText(html),
-      links,
+      links: this.extractLinks(baseUrl, html),
       forms: this.extractForms(baseUrl, html),
-      images: this.extractImages(baseUrl, html),
+      images: this.extractImages(baseUrl, html, this.imageLinkMap(baseUrl, html)),
     };
   }
 
@@ -54,25 +53,49 @@ export class WapParser {
     const pattern = /<a\b([^>]*)>([\s\S]*?)<\/a>/gi;
     let match: RegExpExecArray | null;
     while ((match = pattern.exec(html)) !== null) {
-      const attrs = match[1] ?? '';
-      const rawHref = this.attr(attrs, 'href') ?? '';
+      const rawHref = this.attr(match[1] ?? '', 'href') ?? '';
       if (!rawHref || rawHref.startsWith('javascript:') || rawHref.startsWith('#')) continue;
 
       const inner = match[2] ?? '';
-      let label = this.decode(inner)
-        .replace(/<[^>]+>/g, ' ')
+      // 先剥标签再解码，避免 &lt;C&gt; 被当成标签删除
+      let label = this.decode(inner.replace(/<[^>]+>/g, ' '))
         .replace(/\s+/g, ' ')
         .trim();
 
-      // 链接内若是图片，用图片 alt 作为标签
       if (!label) {
-        const altMatch = inner.match(/<img\b[^>]*\balt\s*=\s*["']([^"']*)["']/i);
-        label = altMatch?.[1] ? this.decode(altMatch[1]).trim() : '[图片链接]';
+        const alt = this.attr(this.firstMatch(inner, /<img\b([^>]*?)\/?>/i) ?? '', 'alt');
+        label = alt ? this.decode(alt).trim() : '[图片链接]';
       }
 
       links.push({ label, href: this.absolute(baseUrl, rawHref), raw: rawHref });
     }
     return links;
+  }
+
+  /** 收集「图片 src -> 包裹它的链接」，用于回填 GameImage.link。 */
+  private imageLinkMap(baseUrl: string, html: string): Map<string, GameLink> {
+    const map = new Map<string, GameLink>();
+    const anchorPattern = /<a\b([^>]*)>([\s\S]*?)<\/a>/gi;
+    let anchor: RegExpExecArray | null;
+    while ((anchor = anchorPattern.exec(html)) !== null) {
+      const rawHref = this.attr(anchor[1] ?? '', 'href') ?? '';
+      if (!rawHref || rawHref.startsWith('javascript:') || rawHref.startsWith('#')) continue;
+      const inner = anchor[2] ?? '';
+      const alt = this.attr(this.firstMatch(inner, /<img\b([^>]*?)\/?>/i) ?? '', 'alt');
+      const link: GameLink = {
+        label: alt ? this.decode(alt).trim() : '[图片链接]',
+        href: this.absolute(baseUrl, rawHref),
+        raw: rawHref,
+      };
+
+      const imgPattern = /<img\b([^>]*?)\/?>/gi;
+      let img: RegExpExecArray | null;
+      while ((img = imgPattern.exec(inner)) !== null) {
+        const src = this.attr(img[1] ?? '', 'src');
+        if (src) map.set(this.absolute(baseUrl, src), link);
+      }
+    }
+    return map;
   }
 
   private extractForms(baseUrl: string, html: string): GameForm[] {
@@ -112,6 +135,9 @@ export class WapParser {
       };
       const placeholder = this.attr(attrs, 'placeholder');
       if (placeholder) field.placeholder = this.decode(placeholder);
+      if (type === 'checkbox' || type === 'radio') {
+        field.checked = this.hasAttr(attrs, 'checked');
+      }
       fields.push(field);
     }
 
@@ -127,11 +153,10 @@ export class WapParser {
         const optionAttrs = optionMatch[1] ?? '';
         options.push({
           value: this.decode(this.attr(optionAttrs, 'value') ?? '').trim(),
-          label: this.decode(optionMatch[2] ?? '')
-            .replace(/<[^>]+>/g, ' ')
+          label: this.decode((optionMatch[2] ?? '').replace(/<[^>]+>/g, ' '))
             .replace(/\s+/g, ' ')
             .trim(),
-          selected: /\bselected\b/i.test(optionAttrs),
+          selected: this.hasAttr(optionAttrs, 'selected'),
         });
       }
       const selected = options.find((option) => option.selected) ?? options[0];
@@ -153,19 +178,20 @@ export class WapParser {
       const name = this.attr(attrs, 'name');
       const type = (this.attr(attrs, 'type') ?? 'submit').toLowerCase();
       if (!name || type === 'button' || type === 'reset') continue;
-      const value =
-        this.attr(attrs, 'value') ??
-        this.decode(match[2] ?? '')
-          .replace(/<[^>]+>/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim();
-      fields.push({ name, type: 'submit', value: this.decode(value) });
+      const attrValue = this.attr(attrs, 'value');
+      const textValue = (match[2] ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      const value = attrValue !== undefined ? this.decode(attrValue) : this.decode(textValue);
+      fields.push({ name, type: 'submit', value });
     }
 
     return fields;
   }
 
-  private extractImages(baseUrl: string, html: string): GameImage[] {
+  private extractImages(
+    baseUrl: string,
+    html: string,
+    linkMap: Map<string, GameLink>,
+  ): GameImage[] {
     const images: GameImage[] = [];
     const pattern = /<img\b([^>]*?)\/?>/gi;
     let match: RegExpExecArray | null;
@@ -173,17 +199,32 @@ export class WapParser {
       const attrs = match[1] ?? '';
       const src = this.attr(attrs, 'src');
       if (!src) continue;
+      const absoluteSrc = this.absolute(baseUrl, src);
       images.push({
-        src: this.absolute(baseUrl, src),
+        src: absoluteSrc,
         alt: this.decode(this.attr(attrs, 'alt') ?? '').trim(),
+        link: linkMap.get(absoluteSrc),
       });
     }
     return images;
   }
 
+  /** 精确匹配属性名（避免 data-href 冒充 href）。支持双引号/单引号/无引号值。 */
   private attr(attrs: string, name: string): string | undefined {
-    const pattern = new RegExp(`\\b${name}\\s*=\\s*["']([^"']*)["']`, 'i');
-    return attrs.match(pattern)?.[1];
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const pattern = new RegExp(
+      `(?:^|\\s)${escaped}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s"'=<>]+))`,
+      'i',
+    );
+    const match = attrs.match(pattern);
+    if (!match) return undefined;
+    return match[1] ?? match[2] ?? match[3];
+  }
+
+  /** 判断布尔属性是否存在（如 selected / checked）。 */
+  private hasAttr(attrs: string, name: string): boolean {
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`(?:^|\\s)${escaped}(?:\\s|=|$)`, 'i').test(attrs);
   }
 
   private absolute(baseUrl: string, href: string): string {
