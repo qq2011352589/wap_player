@@ -113,4 +113,29 @@ describe('FreeAIModel 决策解析', () => {
     await new FreeAIModel(CONFIG).decide(state);
     assert.match(capturedBody, /检测到循环/);
   });
+
+  it('RED: content 为空但 reasoning_content 含 JSON 时应解析成功', async (t) => {
+    t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content: '',
+                  reasoning_content:
+                    '思考……{"actionId":"L0","rationale":"从思考提取","confidence":0.8}',
+                },
+              },
+            ],
+          }),
+          { status: 200 },
+        ),
+    );
+    const decision = await new FreeAIModel(CONFIG).decide(makeState(['L0']));
+    assert.equal(decision.source, 'free-ai');
+    assert.equal(decision.actionId, 'L0');
+  });
 });
