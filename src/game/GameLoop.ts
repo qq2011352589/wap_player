@@ -15,6 +15,9 @@ import { buildActions } from './actionBuilder';
 import type { GameStateManager } from './GameStateManager';
 import { detectUrlCycle } from './loopDetection';
 
+/** 注入 AI 提示词的最近操作数量上限。 */
+const RECENT_ACTION_LIMIT = 5;
+
 export class GameLoop {
   private readonly client: GameClient;
   private readonly controller: AIController;
@@ -41,6 +44,7 @@ export class GameLoop {
     let lastUrl = '';
     let sameUrlStreak = 0;
     const urlHistory: string[] = [];
+    const recentActions: string[] = [];
     let cycleNudged = false;
 
     let page: WapPage;
@@ -105,6 +109,10 @@ export class GameLoop {
         cycleNudged = false;
       }
 
+      if (recentActions.length > 0) {
+        state.recentActions = [...recentActions];
+      }
+
       const decision = await this.controller.choose(state);
       const action = allowed.find((item) => item.id === decision.actionId) ?? null;
 
@@ -129,6 +137,8 @@ export class GameLoop {
         logger.warn(stopReason);
         break;
       }
+      recentActions.push(action.label);
+      if (recentActions.length > RECENT_ACTION_LIMIT) recentActions.shift();
       await this.sleep(this.config.stepDelayMs);
     }
 

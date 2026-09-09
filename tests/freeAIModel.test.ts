@@ -133,6 +133,39 @@ describe('FreeAIModel 决策解析', () => {
     assert.match(capturedBody, /检测到循环/);
   });
 
+  it('S-HIST: recentActions 应出现在 AI 提示词中', async (t) => {
+    let capturedBody = '';
+    t.mock.method(globalThis, 'fetch', async (_url: string, init?: RequestInit) => {
+      capturedBody = String(init?.body ?? '');
+      return new Response(
+        JSON.stringify({
+          choices: [{ message: { content: '{"actionId":"L0","rationale":"x","confidence":0.5}' } }],
+        }),
+        { status: 200 },
+      );
+    });
+    const state = makeState(['L0']);
+    state.recentActions = ['A', 'B', 'A'];
+    await new FreeAIModel(CONFIG).decide(state);
+    assert.match(capturedBody, /最近执行的操作/);
+    assert.match(capturedBody, /A → B → A/);
+  });
+
+  it('S-HIST: 无 recentActions 时提示词不含最近操作行', async (t) => {
+    let capturedBody = '';
+    t.mock.method(globalThis, 'fetch', async (_url: string, init?: RequestInit) => {
+      capturedBody = String(init?.body ?? '');
+      return new Response(
+        JSON.stringify({
+          choices: [{ message: { content: '{"actionId":"L0","rationale":"x","confidence":0.5}' } }],
+        }),
+        { status: 200 },
+      );
+    });
+    await new FreeAIModel(CONFIG).decide(makeState(['L0']));
+    assert.doesNotMatch(capturedBody, /最近执行的操作/);
+  });
+
   it('RED: content 为空但 reasoning_content 含 JSON 时应解析成功', async (t) => {
     t.mock.method(
       globalThis,

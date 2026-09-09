@@ -96,6 +96,12 @@ export class FreeAIModel {
     if (state.hint) {
       lines.push(`重要提示：${state.hint}`);
     }
+    if (state.recentActions && state.recentActions.length > 0) {
+      lines.push(
+        `最近执行的操作：${state.recentActions.join(' → ')}`,
+        '请避免重复上面最近的操作，除非重复是推进游戏所必需的。',
+      );
+    }
     lines.push('', '可选操作：', actionLines, '', '请选择最有利于长期发展、且不会消耗元宝的操作。');
     return lines.join('\n');
   }

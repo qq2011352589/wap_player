@@ -106,6 +106,20 @@ class FixedController {
   }
 }
 
+class CapturingController {
+  readonly states: GameState[] = [];
+  async choose(state: GameState): Promise<Decision> {
+    this.states.push(state);
+    const action = state.actions[0];
+    return {
+      actionId: action ? action.id : null,
+      rationale: 'capture',
+      confidence: 1,
+      source: 'heuristic',
+    };
+  }
+}
+
 function makeLoop(client: unknown, controller: unknown, overrides: Partial<LoopConfig>): GameLoop {
   const stateManager = new GameStateManager(new ResourceManager());
   const config: LoopConfig = {
@@ -159,5 +173,18 @@ describe('GameLoop 安全与韧性', () => {
     });
     const result = await loop.run();
     assert.match(result.stopReason, /循环/);
+  });
+
+  it('S-HIST: 循环应把已执行操作标签写入 recentActions', async () => {
+    const pageA = makePage('http://h/a', [linkAction('L0', '前往A', 'http://h/a')]);
+    const pageB = makePage('http://h/b', [linkAction('L0', '前往B', 'http://h/b')]);
+    const pageC = makePage('http://h/c', [linkAction('L0', '前往C', 'http://h/c')]);
+    const controller = new CapturingController();
+    const loop = makeLoop(new FakeClient([pageA, pageB, pageC]), controller, { maxSteps: 3 });
+    await loop.run();
+    assert.equal(controller.states.length, 3);
+    assert.deepEqual(controller.states[0]!.recentActions, undefined);
+    assert.deepEqual(controller.states[1]!.recentActions, ['[链接] 前往A']);
+    assert.deepEqual(controller.states[2]!.recentActions, ['[链接] 前往A', '[链接] 前往B']);
   });
 });

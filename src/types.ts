@@ -91,6 +91,8 @@ export interface GameState {
   timestamp: number;
   /** 可选提示（例如检测到循环时提示 AI 换操作） */
   hint?: string;
+  /** 最近执行过的操作标签（最新在末尾），供 AI 避免重复 */
+  recentActions?: string[];
 }
 
 /** 决策来源。 */
